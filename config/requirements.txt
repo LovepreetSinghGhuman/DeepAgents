@@ -1,0 +1,63 @@
+# Base dependencies for the RAG application
+# Install with:
+#   pip install -r config/requirements.txt
+#
+# This file contains the core packages needed for:
+# - LangGraph orchestration and retrieval workflows
+# - Vector store and embedding support
+# - OCR and image processing features
+# - Environment variable loading
+#
+
+# ── LangGraph & RAG stack ───────────────────────────────
+langgraph
+langchain-core
+langchain-community
+langchain-chroma
+langchain-text-splitters
+langchain-huggingface
+deepagents
+langchain-groq
+
+# ── Embedding and model inference ────────────────────────
+sentence-transformers
+chromadb
+transformers<5.9.0
+accelerate
+
+# ── Environment configuration ───────────────────────────
+python-dotenv
+
+# ROCm-specific dependencies for the RAG application
+#
+# These packages install a ROCm-enabled PyTorch stack for Windows on AMD GPUs.
+# They are intended for:
+# - Python 3.12
+# - AMD Radeon hardware (for example, RX 7900 XT)
+# - ROCm 7.2.1-compatible builds
+#
+# Note:
+# - These URLs are platform-specific and should only be used on Windows.
+# - Use this file instead of the standard CPU-only requirements when you
+#   want ROCm acceleration for PyTorch-based workloads.
+
+# ── ROCm SDK / runtime packages ────────────────────────
+# Core ROCm SDK components required by the Windows wheels.
+https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm_sdk_core-7.2.1-py3-none-win_amd64.whl
+https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm_sdk_devel-7.2.1-py3-none-win_amd64.whl
+https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm_sdk_libraries_custom-7.2.1-py3-none-win_amd64.whl
+
+# ── ROCm package archive ────────────────────────────────
+# Archive for the ROCm release bundle.
+https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm-7.2.1.tar.gz
+
+# ── PyTorch stack for ROCm 7.2.1 ────────────────────────
+# ROCm-enabled PyTorch, torchaudio, and torchvision builds.
+https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/torch-2.9.1%2Brocm7.2.1-cp312-cp312-win_amd64.whl
+https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/torchaudio-2.9.1%2Brocm7.2.1-cp312-cp312-win_amd64.whl
+https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/torchvision-0.24.1%2Brocm7.2.1-cp312-cp312-win_amd64.whl
+
+
+# ── Additional dependencies ────────────────────────
+pypdf
+ipykernel
