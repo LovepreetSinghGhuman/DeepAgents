@@ -1,0 +1,3 @@
+- wheat flour
+- sugar
+- soybean oil
