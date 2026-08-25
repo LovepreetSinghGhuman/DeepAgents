@@ -61,3 +61,4 @@ https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/torchvision-0.24.1%2Brocm7.2
 # ── Additional dependencies ────────────────────────
 pypdf
 ipykernel
+duckduckgo-search # Custom search engine for internet queries (back-up, NO API key required)
