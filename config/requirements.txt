@@ -1,4 +1,4 @@
-# Base dependencies for the RAG application
+# Base dependencies for the RAG & Audio Summarization application
 # Install with:
 #   pip install -r config/requirements.txt
 #
@@ -7,7 +7,8 @@
 # - Vector store and embedding support
 # - OCR and image processing features
 # - Environment variable loading
-#
+# - Offline audio STT and speaker diarization
+# - Word and PDF document generation
 
 # ── LangGraph & RAG stack ───────────────────────────────
 langgraph
@@ -57,8 +58,15 @@ https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/torch-2.9.1%2Brocm7.2.1-cp31
 https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/torchaudio-2.9.1%2Brocm7.2.1-cp312-cp312-win_amd64.whl
 https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/torchvision-0.24.1%2Brocm7.2.1-cp312-cp312-win_amd64.whl
 
-
 # ── Additional dependencies ────────────────────────
 pypdf
 ipykernel
 duckduckgo-search # Custom search engine for internet queries (back-up, NO API key required)
+
+# ── Audio Processing & Diarization ─────────────────────
+openai-whisper
+pyannote.audio
+
+# ── Document Export ─────────────────────────────────────
+python-docx
+reportlab
