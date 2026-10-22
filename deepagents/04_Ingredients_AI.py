@@ -27,12 +27,19 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
+from typing import Literal
 from urllib.parse import urlparse
 
 import requests
 from bs4 import BeautifulSoup
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    field_validator,
+)
 
-# ----------------------------------------------------------------------------
 # CONFIGURATION
 # ----------------------------------------------------------------------------
 
@@ -51,10 +58,6 @@ DEFAULT_MODELS = {
     "ollama": os.getenv("OLLAMA_MODEL") or "qwen2.5:7b-instruct",
     "openrouter": os.getenv("OPENROUTER_MODEL") or "nvidia/nemotron-3.5-super-vl:free",
 }
-
-VALID_TRENDS = {"UP", "DOWN", "STABLE", "UNKNOWN"}
-VALID_CONFIDENCE = {"HIGH", "MEDIUM", "LOW"}
-REQUIRED_KEYS = ("trend", "confidence", "specific_quotes", "summary")
 
 log = logging.getLogger("price-agent")
 
@@ -236,20 +239,62 @@ def call_llm(prompt: str, backend: str, model: str, json_mode: bool = True) -> s
     raise ValueError(f"Unknown LLM backend: {backend}")
 
 
-def _validate_analysis(data) -> str | None:
-    """Return an error description, or None if the analysis dict is well-formed."""
-    if not isinstance(data, dict):
-        return "not a JSON object"
-    missing = [key for key in REQUIRED_KEYS if key not in data]
-    if missing:
-        return f"missing keys: {', '.join(missing)}"
-    if str(data["trend"]).strip().upper() not in VALID_TRENDS:
-        return f"trend must be one of {sorted(VALID_TRENDS)}"
-    if str(data["confidence"]).strip().upper() not in VALID_CONFIDENCE:
-        return f"confidence must be one of {sorted(VALID_CONFIDENCE)}"
-    if not isinstance(data["specific_quotes"], list):
-        return "specific_quotes must be a list"
-    return None
+# ---- Pydantic validation of LLM output --------------------------------------
+# The LLM's reply is untrusted text: extra keys are dropped (extra="ignore"),
+# enum fields are normalized, and hostile or runaway content is capped/filtered
+# (control characters stripped, markdown link syntax rejected in quotes,
+# hard length limits) so it maps to a well-formed Analysis or fails loudly.
+
+
+class Source(BaseModel):
+    url: str = Field(default="", max_length=500)
+    title: str = Field(default="", max_length=300)
+    date: str = Field(default="", max_length=60)
+
+
+class Analysis(BaseModel):
+    model_config = ConfigDict(extra="ignore")   # no smuggled extra payload keys
+
+    ingredient: str = Field(default="", max_length=200)
+    trend: Literal["UP", "DOWN", "STABLE", "UNKNOWN"]
+    confidence: Literal["HIGH", "MEDIUM", "LOW"]
+    specific_quotes: list[str] = Field(default_factory=list, max_length=10)
+    summary: str = Field(max_length=1000)
+    sources: list[Source] = Field(default_factory=list, max_length=12)
+
+    @field_validator("trend", "confidence", mode="before")
+    @classmethod
+    def _normalize_enum(cls, value):
+        return str(value).strip().upper()
+
+    @field_validator("specific_quotes", mode="before")
+    @classmethod
+    def _clean_quotes(cls, quotes):
+        if not isinstance(quotes, list):
+            raise ValueError("specific_quotes must be a list of strings")
+        cleaned: list[str] = []
+        for quote in quotes:
+            quote = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", str(quote))
+            quote = re.sub(r"\s+", " ", quote).strip()[:300]
+            # reject crafted markdown links / HTML tags in quotes (report hygiene)
+            if quote and not re.search(r"\]\(\s*https?:|<(?:script|iframe|img)\b",
+                                       quote, re.IGNORECASE):
+                cleaned.append(quote)
+        return cleaned[:10]
+
+    @field_validator("summary", mode="before")
+    @classmethod
+    def _clean_summary(cls, summary):
+        if summary is None:
+            return ""
+        summary = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", str(summary))
+        return re.sub(r"\s+", " ", summary).strip()[:1000]
+
+
+def _validation_message(exc: ValidationError) -> str:
+    """Compact Pydantic error summary, fed back into the LLM retry prompt."""
+    return "; ".join(f"{'.'.join(str(part) for part in err['loc']) or 'value'}: {err['msg']}"
+                     for err in exc.errors()[:3])
 
 
 def _extract_json(raw: str) -> dict | None:
@@ -296,65 +341,82 @@ def analyze_price_trend(ingredient: str, results: list[dict],
                              "date": date_label})
 
     if not context_blocks:
-        return {"ingredient": ingredient, "trend": "UNKNOWN", "confidence": "LOW",
-                "specific_quotes": [], "summary": "No usable search results or page content.",
-                "sources": []}
+        return Analysis(
+            ingredient=ingredient, trend="UNKNOWN", confidence="LOW",
+            specific_quotes=[], summary="No usable search results or page content.",
+        ).model_dump(mode="json")
 
     prompt = f"""You are a commodity pricing analyst preparing intelligence for a procurement team
-before contract renegotiation. Below are web excerpts for "{ingredient}".
+                before contract renegotiation. Below are web excerpts for "{ingredient}".
 
-Using ONLY the information in the context above (never invent or guess prices), determine:
-1. The overall price trend (UP, DOWN, STABLE, or UNKNOWN) over the last 3-6 months.
-2. Specific price quotes found in the context, each with currency, unit, and date/date period.
-3. A 2-3 sentence executive summary.
+                Using ONLY the information in the context above (never invent or guess prices), determine:
+                1. The overall price trend (UP, DOWN, STABLE, or UNKNOWN) over the last 3-6 months.
+                2. Specific price quotes found in the context, each with currency, unit, and date/date period.
+                3. A 2-3 sentence executive summary.
 
-Rules:
-- If the context contains no usable price information, return trend UNKNOWN, confidence LOW,
-  an empty quote list, and a one-sentence explanation.
-- Cite sources as SOURCE 1, SOURCE 2, ... inside the quotes.
-- Quote format example: "215 USD per ton (Apr 2026, SOURCE 2)".
+                Rules:
+                - If the context contains no usable price information, return trend UNKNOWN, confidence LOW,
+                an empty quote list, and a one-sentence explanation.
+                - Cite sources as SOURCE 1, SOURCE 2, ... inside the quotes.
+                - Quote format example: "215 USD per ton (Apr 2026, SOURCE 2)".
 
-Return strictly this JSON (no markdown fences, no commentary):
-{{
-  "trend": "UP|DOWN|STABLE|UNKNOWN",
-  "confidence": "HIGH|MEDIUM|LOW",
-  "specific_quotes": ["quote with currency, unit and date", "..."],
-  "summary": "your concise summary"
-}}
+                Return strictly this JSON (no markdown fences, no commentary):
+                {{
+                "trend": "UP|DOWN|STABLE|UNKNOWN",
+                "confidence": "HIGH|MEDIUM|LOW",
+                "specific_quotes": ["quote with currency, unit and date", "..."],
+                "summary": "your concise summary"
+                }}
 
-Context ({len(context_blocks)} excerpt(s)):
-{chr(10).join(context_blocks)}
-"""
+                Context ({len(context_blocks)} excerpt(s)):
+                {chr(10).join(context_blocks)}
+                """
 
     raw = ""
-    data = None
-    last_error = None
+    analysis: Analysis | None = None
+    last_error: str | None = None
     for attempt in range(1, JSON_RETRIES + 1):
         attempt_prompt = prompt
         if last_error:
             attempt_prompt += (f"\nYour previous reply was invalid ({last_error}). "
                                "Respond with ONLY the valid JSON object.")
         raw = call_llm(attempt_prompt, backend, model)
-        candidate = _extract_json(raw)
-        last_error = _validate_analysis(candidate)
-        if last_error is None:
-            data = candidate
+        try:
+            analysis = Analysis.model_validate_json(raw)
+        except ValidationError as raw_exc:
+            # model_validate_json also fails on malformed JSON; try regex recovery
+            candidate = _extract_json(raw)
+            try:
+                analysis = Analysis.model_validate(candidate)
+            except ValidationError:
+                analysis = None
+                last_error = _validation_message(raw_exc)
+            log.debug("LLM JSON invalid for %r (attempt %d): %s",
+                      ingredient, attempt, last_error)
+        if analysis is not None:
             break
-        log.debug("LLM JSON invalid for %r (attempt %d): %s", ingredient, attempt, last_error)
 
-    if data is None:
+    if analysis is None:
         # Last resort: word-boundary heuristic so one bad parse doesn't kill the run
         log.warning("Falling back to heuristic trend extraction for %r", ingredient)
         match = re.search(r"\b(UP|DOWN|STABLE)\b", raw, re.IGNORECASE)
-        data = {"trend": match.group(1).upper() if match else "UNKNOWN",
-                "confidence": "LOW", "specific_quotes": [],
-                "summary": raw.strip()[:300]}
+        analysis = Analysis(
+            ingredient=ingredient,
+            trend=match.group(1).upper() if match else "UNKNOWN",
+            confidence="LOW",
+            specific_quotes=[],
+            summary=raw.strip()[:1000],
+        )
 
-    data["trend"] = str(data["trend"]).strip().upper()
-    data["confidence"] = str(data["confidence"]).strip().upper()
-    data["ingredient"] = ingredient
-    data["sources"] = sources_meta
-    return data
+    # Trusted, locally-built metadata (never taken from the LLM's reply)
+    analysis.ingredient = ingredient
+    analysis.sources = [
+        Source(url=str(source["url"])[:500],
+               title=str(source.get("title", ""))[:300],
+               date=str(source.get("date", ""))[:60])
+        for source in sources_meta if source.get("url")
+    ]
+    return analysis.model_dump(mode="json")
 
 
 # ----------------------------------------------------------------------------
@@ -363,7 +425,7 @@ Context ({len(context_blocks)} excerpt(s)):
 
 LEVERAGE_GUIDANCE = {
     "DOWN": ("Strong leverage",
-             "Prices are falling - demand a 5-10% reduction from current contracts, "
+             "Prices are falling - look for a reduction from current contracts, "
              "citing recent market drops."),
     "UP": ("Limited leverage",
            "Prices are rising - consider locking in long-term fixed pricing or "
@@ -453,12 +515,12 @@ def process_ingredient(ingredient: str, args) -> dict:
     cache = cache_path(ingredient)
     if not args.no_cache:
         try:
-            cached = json.loads(cache.read_text(encoding="utf-8"))
-            if isinstance(cached, dict) and cached.get("trend"):
-                log.info("[cache] Using cached analysis for %r (--no-cache to refresh)",
-                         ingredient)
-                return cached
-        except (OSError, ValueError):
+            cached = Analysis.model_validate(
+                json.loads(cache.read_text(encoding="utf-8")))
+            log.info("[cache] Using cached analysis for %r (--no-cache to refresh)",
+                     ingredient)
+            return cached.model_dump(mode="json")
+        except (OSError, ValueError):   # missing/corrupt/wrong-shaped -> re-run
             pass
 
     log.info("Processing %r ...", ingredient)
