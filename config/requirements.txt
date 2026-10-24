@@ -31,32 +31,25 @@ python-dotenv
 
 # ROCm-specific dependencies for the RAG application
 #
-# These packages install a ROCm-enabled PyTorch stack for Windows on AMD GPUs.
-# They are intended for:
-# - Python 3.12
-# - AMD Radeon hardware (for example, RX 7900 XT)
-# - ROCm 7.2.1-compatible builds
+# ROCm 10.1.0 installed via pip (Windows 11, AMD Radeon RX 7900 XT, gfx1100).
+# Install these FIRST, into a fresh Python 3.12 virtual environment:
 #
-# Note:
-# - These URLs are platform-specific and should only be used on Windows.
-# - Use this file instead of the standard CPU-only requirements when you
-#   want ROCm acceleration for PyTorch-based workloads.
-
-# ── ROCm SDK / runtime packages ────────────────────────
-# Core ROCm SDK components required by the Windows wheels.
-https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm_sdk_core-7.2.1-py3-none-win_amd64.whl
-https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm_sdk_devel-7.2.1-py3-none-win_amd64.whl
-https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm_sdk_libraries_custom-7.2.1-py3-none-win_amd64.whl
-
-# ── ROCm package archive ────────────────────────────────
-# Archive for the ROCm release bundle.
-https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm-7.2.1.tar.gz
-
-# ── PyTorch stack for ROCm 7.2.1 ────────────────────────
-# ROCm-enabled PyTorch, torchaudio, and torchvision builds.
-https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/torch-2.9.1%2Brocm7.2.1-cp312-cp312-win_amd64.whl
-https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/torchaudio-2.9.1%2Brocm7.2.1-cp312-cp312-win_amd64.whl
-https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/torchvision-0.24.1%2Brocm7.2.1-cp312-cp312-win_amd64.whl
+#   python -m pip install --index-url https://stable.repo.amd.com/rocm/whl-next/ "rocm[libraries,device-gfx1100]==10.1.0"
+#   python -m pip install --index-url https://stable.repo.amd.com/rocm/whl-next/ ^
+#       "torch[device-gfx1100]==2.14.0+rocm10.1.0" ^
+#       "torchvision[device-gfx1100]==0.29.0a0+rocm10.1.0" ^
+#       "torchaudio==2.11.0.3+rocm10.1.0"
+#
+# Source (install selector, pip on Windows):
+#   https://rocm.docs.amd.com/en/latest/install/rocm.html?fam=radeon&w=compute&gpu=amd-radeon-rx-7900-xt&os=windows&windows-ver=11&i=pip&gfx=gfx1100
+#
+# Notes:
+# - Uninstall HIP SDK / older ROCm 7.x first, disable Smart App Control &
+#   Windows Defender Application Guard, and keep the Adrenalin driver current.
+# - Verify with:  python -c "import torch; print(torch.cuda.is_available())"  -> True
+#   (and optionally:  hipinfo /  rocm-sdk targets)
+# - Everything below this block assumes the ROCm PyTorch stack above is already
+#   present in the environment; do NOT install plain "torch" from PyPI on top.
 
 # ── Additional dependencies ────────────────────────
 pypdf
