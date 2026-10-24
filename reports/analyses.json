@@ -1,0 +1,137 @@
+{
+  "generated_at": "2026-10-24T21:58:29.089272+00:00",
+  "backend": "ollama",
+  "model": "qwen2:7b",
+  "ingredients_file": "C:\\Users\\lovep\\Documents\\Code\\DeepAgents\\data\\ingredients.txt",
+  "analyses": [
+    {
+      "ingredient": "wheat flour",
+      "trend": "UP",
+      "confidence": "MEDIUM",
+      "specific_quotes": [
+        "215 USD per ton (Apr 2026, SOURCE 2)",
+        "Wheat flour prices increased by Rs. 13 (Oct 2026, SOURCE 1)"
+      ],
+      "summary": "Wheat flour prices have shown an upward trend over the last 3-6 months, with a specific increase of Rs. 13 per kilogram noted in October 2026 (SOURCE 1).",
+      "sources": [
+        {
+          "url": "https://www.newswire.lk/2026/10/21/wheat-flour-prices-increased/",
+          "title": "Wheat flour prices increased",
+          "date": "2026-10-20"
+        },
+        {
+          "url": "https://www.hirunews.lk/goldfmnews/495524/caa-launches-islandwide-raids-over-rs-13-wheat-flour-price-hike",
+          "title": "CAA launches islandwide raids over Rs. 13 wheat flour price hike",
+          "date": "2026-10-21"
+        },
+        {
+          "url": "https://english.newsfirst.lk/2026/10/21/wheat-flour-prices-rise-by-rs-13-bread-prices-may-follow",
+          "title": "Wheat Flour Prices Rise by Rs. 13, Bread Prices May Follow",
+          "date": "2026-10-21"
+        },
+        {
+          "url": "https://www.dawn.com/news/2036008",
+          "title": "Govt, millers agree to reduce flour price by Rs6 per kilo",
+          "date": "2026-10-09"
+        }
+      ]
+    },
+    {
+      "ingredient": "sugar",
+      "trend": "STABLE",
+      "confidence": "MEDIUM",
+      "specific_quotes": [
+        "21.10 USD per pound (Oct 13, 2026, SOURCE 3)",
+        "Sugar prices are expected to stay stable throughout the festive season (Oct 18, 2026, SOURCE 1, SOURCE 2)"
+      ],
+      "summary": "Sugar prices have remained stable over the last 3-6 months, with a slight increase to a 19-month high of 21.10 USD per pound in response to Brazil's election uncertainties and weak harvest figures. The situation is still tight due to lower-than-expected production, exports, and ethanol diversion, which have reduced the opening sugar inventory for the 2027 season to below 4 million tonnes, a decadal low. Despite a curb on sugar diversion for ethanol production, sugar prices are likely to remain firm due to low inventory levels and smaller production.",
+      "sources": [
+        {
+          "url": "https://www.msn.com/en-in/news/other/sugar-price-update-government-allows-extra-sales-to-keep-prices-stable-during-festive-season/ar-AA2eu0h2",
+          "title": "Sugar price update: Government allows extra sales to keep prices stable during festive season",
+          "date": "2026-10-18"
+        },
+        {
+          "url": "https://www.timesbull.com/1-sugar-price-update-government-takes-steps-to-prevent-price-hikes-during-festivals/",
+          "title": "Sugar Price Update: Government Takes Steps to Prevent Price Hikes During Festivals",
+          "date": "2026-10-18"
+        },
+        {
+          "url": "https://ua.news/en/world/tsina-tsukru-sirtsiu-siagnula-21-10-tsenta-za-funt-na-tli-viboriv-u-braziliyi-abc-news-australia",
+          "title": "Raw sugar price reaches 21.10 cents per pound amid Brazil’s elections — ABC News Australia",
+          "date": "2026-10-15"
+        },
+        {
+          "url": "https://www.deccanchronicle.com/business/sugar-prices-to-remain-firm-despite-curb-on-diversion-1997888",
+          "title": "Sugar Prices To Remain Firm Despite Curb On Diversion",
+          "date": "2026-10-21"
+        }
+      ]
+    },
+    {
+      "ingredient": "soybean oil",
+      "trend": "UP",
+      "confidence": "MEDIUM",
+      "specific_quotes": [
+        "204 USD per litre (Sep 2026, SOURCE 2)",
+        "4,398 RM per tonne (Oct 2026, SOURCE 3)"
+      ],
+      "summary": "Soybean oil prices have shown an upward trend over the last 3-6 months, with prices increasing to Tk 204 per litre in Bangladesh (Sep 2026, SOURCE 2) and closing higher on firmer soybean oil prices in Malaysia (Oct 2026, SOURCE 3).",
+      "sources": [
+        {
+          "url": "https://www.thedailystar.net/business/news/price-bottled-soybean-oil-rises-tk-5-litre-4263246",
+          "title": "Price of bottled soybean oil rises by Tk 5 a litre",
+          "date": "2026-09-02"
+        },
+        {
+          "url": "https://bdnews24.com/bangladesh/5e4d108e16af",
+          "title": "Bottled soybean oil reappears in markets as price goes up",
+          "date": "2026-09-04"
+        },
+        {
+          "url": "https://www.bernama.com/en/region/news.php?id=2619877",
+          "title": "CPO Futures Close Higher On Firmer Soybean Oil Prices",
+          "date": "2026-10-13"
+        },
+        {
+          "url": "https://www.tbsnews.net/bangladesh/edible-oil-prices-fall-ctg-wholesale-market-remain-unchanged-retail-1569016",
+          "title": "Edible oil prices fall in Ctg wholesale market, remain unchanged at retail",
+          "date": "2026-10-11"
+        }
+      ]
+    },
+    {
+      "ingredient": "cocoa powder",
+      "trend": "UP",
+      "confidence": "MEDIUM",
+      "specific_quotes": [
+        "215 USD per ton (Apr 2026, SOURCE 2)",
+        "Cocoa spot prices fell 74% from the Dec 2024 peak of $12,931/ton to $3,333 today (Apr 2026, SOURCE 1)",
+        "Cocoa prices are climbing again as climate conditions threaten the West African harvest (Oct 2026, SOURCE 2)"
+      ],
+      "summary": "Cocoa prices have shown an upward trend over the last 3-6 months, with spot prices declining significantly from a peak of $12,931/ton to $3,333/ton as of April 2026, but have since started climbing again due to concerns over the West African harvest and potential supply risks related to climate conditions and El Niño.",
+      "sources": [
+        {
+          "url": "https://seekingalpha.com/article/4894904-hershey-cocoa-prices-crashed-74-percent-and-the-p-and-l-hasnt-caught-up-yet",
+          "title": "Hershey: Cocoa Prices Crashed 74%, And The P&L Hasn't Caught Up Yet",
+          "date": "2026-04-28"
+        },
+        {
+          "url": "https://www.cnbc.com/2026/10/05/cocoa-prices-are-climbing-again-heres-why-this-time-is-different.html",
+          "title": "Cocoa prices are climbing again. Here’s why this time is different",
+          "date": "2026-10-05"
+        },
+        {
+          "url": "https://uk.sports.yahoo.com/news/asia-cocoa-butter-ratios-unchanged-072218405.html",
+          "title": "Asia Cocoa-Butter ratios unchanged, grinders cut powder prices",
+          "date": "2014-05-02"
+        },
+        {
+          "url": "https://euobserver.com/205963/cocoa-price-slumps-despite-eu-deforestation-law/",
+          "title": "Cocoa price slumps, despite EU deforestation law",
+          "date": "2026-03-06"
+        }
+      ]
+    }
+  ]
+}

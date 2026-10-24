@@ -1,15 +1,36 @@
 #!/usr/bin/env python3
-"""
+r"""
 Price Intelligence / Renegotiation Agent
 
+QUICK START (local, no API key required)
+  1. Start the local Ollama server first (skip if the Ollama app is already running):
+       ollama serve
+     (or just launch the Ollama desktop app)
+
+  2. Run the agent (one-time deps: pip install requests beautifulsoup4 pydantic ollama openai):
+       cd "C:\Users\lovep\Documents\Code\DeepAgents\deepagents"
+       python 04_Ingredients_AI.py --model qwen2:7b --no-cache -v
+
+  3. Read the output:
+       ../reports/price_negotiation_report.md   (report)
+       ../reports/analyses.json                 (audit data)
+
+  Flags worth knowing:
+       --model qwen2:7b   the model installed locally (default qwen2.5:7b-instruct is NOT installed)
+       --no-cache         force fresh searches (else cached for the current ISO week)
+       -v                 debug logging
+       --workers 1        run one ingredient at a time instead of 3 in parallel
+
+  Edit ../data/ingredients.txt to change what gets analyzed.
+
   STEP 1  Load ingredients from ../data/ingredients.txt
-  STEP 2  Search (Google News RSS - free, no key)
+  STEP 2  Search (Bing News RSS, direct publisher URLs; Google News RSS fallback)
   STEP 3  Scrape & clean source pages
   STEP 4  LLM analyst (Ollama locally, or OpenRouter)
   STEP 5  Renegotiation report (Markdown) + audit JSON
 
 Usage:
-  python 04_Ingredients_AI.py
+  python 04_Ingredients_AI.py --model qwen2:7b
   python 04_Ingredients_AI.py --backend openrouter --model openai/gpt-4o-mini -v
 
 Env:
@@ -28,7 +49,7 @@ from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Literal
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 import requests
 from bs4 import BeautifulSoup
@@ -66,6 +87,7 @@ _HTTP.headers.update({
     "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                    "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
 })
+_HTTP.cookies.set("CONSENT", "YES+cb.20240101-00-p0.en+FX+000", domain=".google.com")
 
 # ----------------------------------------------------------------------------
 # STEP 1: Load Ingredients from File
@@ -94,9 +116,51 @@ def load_ingredients(filepath: Path) -> list[str]:
 
 
 def search_ingredient_price(ingredient: str) -> list[dict]:
+    """Bing News RSS first (direct publisher URLs), Google News RSS as fallback."""
+    query = f"{ingredient} price"
+    try:
+        return search_bing_news(query)
+    except Exception as exc:
+        log.debug("Bing News failed for %r (%s); falling back to Google News",
+                  ingredient, exc)
+        return search_google_news(ingredient)
+
+
+def _decode_bing_link(link: str) -> str:
+    """Unwrap Bing's apiclick.aspx redirect to the real publisher URL."""
+    if "apiclick.aspx" not in link:
+        return link
+    try:
+        params = parse_qs(urlparse(link).query)
+        return params.get("url", [link])[0] or link
+    except ValueError:
+        return link
+
+
+def search_bing_news(query: str) -> list[dict]:
+    """Return list of {url, title, snippet, date} from Bing News RSS."""
+    resp = _HTTP.get("https://www.bing.com/news/search",
+                     params={"q": query, "format": "RSS"}, timeout=15)
+    resp.raise_for_status()
+    root = ET.fromstring(resp.content)
+    results: list[dict] = []
+    for item in root.iter("item"):
+        raw_desc = item.findtext("description") or ""
+        results.append({
+            "url": _decode_bing_link((item.findtext("link") or "").strip()),
+            "title": (item.findtext("title") or "").strip(),
+            "snippet": BeautifulSoup(raw_desc, "html.parser").get_text(" ", strip=True),
+            "date": item.findtext("pubDate"),
+        })
+        if len(results) >= 2 * MAX_SOURCES:   # headroom for de-duplication
+            break
+    return [r for r in results if r["url"]]
+
+
+def search_google_news(ingredient: str) -> list[dict]:
     """Return list of {url, title, snippet, date} from Google News RSS."""
     since = (datetime.now(timezone.utc) - timedelta(days=SOURCE_WINDOW_DAYS)).strftime("%Y-%m")
-    query = f"{ingredient} wholesale price trend since {since}"
+    query = f"{ingredient} wholesale price trend after:{since}"
 
     resp = _HTTP.get(
         "https://news.google.com/rss/search",
@@ -185,6 +249,9 @@ def fetch_page_text(url: str, max_chars: int = 3000) -> str | None:
     try:
         resp = _HTTP.get(url, timeout=15)
         resp.raise_for_status()
+        if "consent.google.com" in str(resp.url):
+            log.debug("Blocked by Google consent wall: %s", url)
+            return None
         soup = BeautifulSoup(resp.content, "html.parser")
         for tag in soup(["script", "style", "nav", "footer", "header", "aside",
                          "form", "noscript"]):
